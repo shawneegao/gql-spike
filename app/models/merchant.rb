@@ -1,45 +1,44 @@
+# frozen_string_literal: true
+# fyi target_data is in target_methods
 require 'httparty'
 require 'webmock'
 include WebMock::API
 
-class Merchant
-    associated_target ::Target::BankAccount, :bank_account
-    # proto wrappable - do it 
-    # we can use Target.type_of(object)
-    # [Example] Target.type_of(user) ==> ::Target::CAPITAL_CUSTOMER
-    # there is also a type is
+class Merchant < TargetBase
+  def self._fetch_target_data(token)
+    raw_data = HTTParty.get(BASE_URL + "/merchant/#{token}", format: :json).parsed_response.first
+    OpenStruct.new(raw_data)
+  end
 
-    #lol there is def a better place to put this
-    WebMock.enable!
-    BASE_URL = "http://api.resources.com".freeze
+  def self.target_data_class
+    OpenStruct
+  end
 
-    #need to figure out how to stub regex
-    stub_request(:get, "http://api.resources.com/merchant/adfadf").
-    with(
-        headers: {
-        'Accept'=>'*/*',
-        'Accept-Encoding'=>'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
-        'User-Agent'=>'Ruby'
-        }).
-    to_return(status: 200, body: [{
-        token: 'adfadf',
-        storeName: 'Sobey'
-      }].to_json, headers: {})
+  def token
+    target_data.token
+  end
 
-    def self.lookup(token)
-        @target_data ||= HTTParty.get(BASE_URL + "/merchant/#{token}", format: :json).parsed_response.first
-    end
+  def store_name
+    target_data.storeName
+  end
 
-    #figure out how to make this work......
-    def token
-        token
-    end
+  ###################
+  # Webmock
+  ###################
+  WebMock.enable!
+  BASE_URL = 'http://api.resources.com'
 
-    def storeName
-        target_data.storeName
-    end
-
+  # need to figure out how to stub regex
+  stub_request(:get, 'http://api.resources.com/merchant/adfadf')
+    .with(
+      headers: {
+        'Accept' => '*/*',
+        'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
+        'User-Agent' => 'Ruby'
+      }
+    )
+    .to_return(status: 200, body: [{
+      token: 'adfadf',
+      storeName: 'Sobey'
+    }].to_json, headers: {})
 end
-
-
-

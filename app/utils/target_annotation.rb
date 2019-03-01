@@ -1,1 +1,2 @@
-#to define how to convert to annotate
+module TargetAnnotation
+end
