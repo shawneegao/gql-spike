@@ -9,20 +9,16 @@ module Types
     #i guess we can store an array of acceptable fields and go with that.
 
     # this class method creates a field instance from a list of arguments, keyword arguments, and a block
-    # Will return [:BaseObject, :PaymentType, :MerchantType]
-    # i have a solution for this, but the implementation is just not that 
-    # great yet, idk why queryType and base object are the only two showing up
-    
-    typesSubClassNames = Types.constants
-    typesSubClassNames.delete(:BaseObject)
-    
-    for type in typesSubClassNames do
+
+    VALID_ROOT_TYPES = [Types::PaymentType, Types::MerchantType]
+
+    for type in VALID_ROOT_TYPES do
       # use introspection lookup gql type - error if none 
       # get the constant! 
-      binding.pry
-      fieldName = /(.*?)Type/.match(type.to_s)[1].downcase
-      typeClass = Types.const_get(type)
-      field fieldName, typeClass, null: false do
+      #unless Types.const_defined?(type) raise "Type #{type} is not not a valid entry point into the schema"
+
+      fieldName = /Types::(.*?)Type/.match(type.to_s)[1].downcase
+      field fieldName, type, null: false do
         argument :id, ID, required: true
       end
     end
