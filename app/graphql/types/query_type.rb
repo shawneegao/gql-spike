@@ -37,14 +37,19 @@ module Types
     #   Payment.lookup(params[:id])
     # end
 
-    def payment(params)
-      testLookup :payment, params
+    # def payment(params)
+    #   testLookup :payment, params
+    # end
+
+    def self.define_field(fieldName)
+      define_method(fieldName) do |params|
+        targetClass = Object.const_get(fieldName.capitalize)
+        targetClass.lookup(params[:id])
+      end
     end
 
-    def testLookup(fieldName, params)
-      targetClass = Object.const_get(fieldName.capitalize)
-      targetClass.lookup(params[:id])
-    end
+    define_field :payment
+    define_field :merchant
 
     # The next step: 
     # define_method :some_method do |params|
