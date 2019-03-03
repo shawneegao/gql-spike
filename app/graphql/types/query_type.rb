@@ -12,7 +12,7 @@ module Types
 
     # Instead of defining it here explicitly it would be dope to just lookup
     # the constants in the Types module
-    VALID_ROOT_TYPES = [Types::PaymentType, Types::MerchantType]
+    VALID_ROOT_TYPES = [Types::Target::PaymentType, Types::Target::MerchantType]
 
     for type in VALID_ROOT_TYPES do
       # use introspection lookup gql type - error if none 
@@ -20,7 +20,7 @@ module Types
       # add some saftey checks
       # unless Types.const_defined?(type) raise "Type #{type} is not not a valid entry point into the schema"
 
-      fieldName = /Types::(.*?)Type/.match(type.to_s)[1].downcase
+      fieldName = /Types::Target::(.*?)Type/.match(type.to_s)[1].downcase
       field fieldName, type, null: false do
         argument :id, ID, required: true
       end
