@@ -3,24 +3,42 @@ module Types
     # Add root-level fields here.
     # They will be entry points for queries on your schema.
 
-    #we have to define the fields on here maybe bc unlike targets we don't have a 
-    #list of fields that should be here
+    # this class method creates a 'field' instance from a list of arguments, keyword arguments, and a block
 
-    #i guess we can store an array of acceptable fields and go with that.
-
-    # this class method creates a field instance from a list of arguments, keyword arguments, and a block
-
-    # Instead of defining it here explicitly it would be dope to just lookup
-    # the constants in the Types module
-    VALID_ROOT_TYPES = [Types::Target::PaymentType, Types::Target::MerchantType]
-
+    # Valid root types can be explicitly declared 
+    # or we can just lookup the constants in the Types module
+    # make target.rb with mapping
+    VALID_ROOT_TYPES = [:Payment, :Merchant, :Instrument]
+  
     for type in VALID_ROOT_TYPES do
       # use introspection lookup gql type - error if none 
-
-      # add some saftey checks
+      # add some safety checks
       # unless Types.const_defined?(type) raise "Type #{type} is not not a valid entry point into the schema"
+      targetClass = ""
+      targetField = ""
+      if TargetBase.const_defined?(type)
+        targetClass = TargetBase.const_get(type)
+        targetFields = targetClass.class_variables
 
-      fieldName = /Types::Target::(.*?)Type/.match(type.to_s)[1].downcase
+        gqlTypeName = "Types::Target::#{type.to_s}Type"
+        
+        gqlTypeName = Class.new(Types::BaseObject) do
+          implements Types::TargetType
+          for targetField in targetFields do
+            fieldType = targetClass.class_variable_get(targetField.to_sym).type
+            nullable = targetClass.class_variable_get(targetField.to_sym).null
+            field targetField.to_sym, fieldType, null: nullable
+          end
+        end
+
+        # we pass in false so that we don't get the instance methods of the super class
+        # will probably have to refine this to the ones that are annotated
+
+      end
+
+      # fieldName = /Types::Target::(.*?)Type/.match(type.to_s)[1].downcase
+      fieldName = type.downcase
+      binding.pry
       field fieldName, type, null: false do
         argument :id, ID, required: true
       end
@@ -50,6 +68,7 @@ module Types
 
     define_field :payment
     define_field :merchant
+
 
     # The next step: 
     # define_method :some_method do |params|

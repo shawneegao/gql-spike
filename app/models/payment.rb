@@ -20,17 +20,29 @@ class Payment < TargetBase
     OpenStruct
   end
 
-  def amount
-    target_data.amount
-  end
+  # annotation is going to turn these instance methods into instance variables 
+  # which will be objects that we can then in our query type call
+  # field.type, field.null? etc. 
+  annotate_field Integer, null: false, definition: 
+    def amount
+      target_data.amount
+    end
+  
+  annotate_field Types::BaseObject::ID, null: false, definition: 
+    def token
+      target_data.token
+    end
 
+  # not annotated bc this field does not need to exposed to the 
+  # graphQL type
   def merchant_token
     target_data.merchant_token
   end
 
-  def merchant
-    @merchant ||= Merchant.lookup(merchant_token)
-  end
+  annotate_field Merchant, null: false, definition: 
+    def merchant
+      @merchant ||= Merchant.lookup(merchant_token)
+    end
 
   ###################
   # Webmock

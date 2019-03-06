@@ -12,7 +12,7 @@ module TargetMethods
     # underlying objects.
     def initialize(token: nil, target_data: nil, eager_load_data: nil)
       token = token.to_s
-
+      
       if token.blank? && target_data.blank?
         raise Target::InvalidRequestError,
           "#{self.class} initializer: Token and target data are both unset"
