@@ -15,7 +15,7 @@ module Types
       # add some safety checks
       # unless Types.const_defined?(type) raise "Type #{type} is not not a valid entry point into the schema"
       targetClass = ""
-      targetField = ""
+      targetFields = ""
       if TargetBase.const_defined?(type)
         targetClass = TargetBase.const_get(type)
         targetFields = targetClass.class_variables
@@ -38,8 +38,9 @@ module Types
 
       # fieldName = /Types::Target::(.*?)Type/.match(type.to_s)[1].downcase
       fieldName = type.downcase
-      binding.pry
-      field fieldName, type, null: false do
+      field fieldName, Module.const_get(type), null: false do
+        binding.pry
+        
         argument :id, ID, required: true
       end
     end
