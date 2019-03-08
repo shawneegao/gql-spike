@@ -14,12 +14,12 @@ class Merchant < TargetBase
     OpenStruct
   end
 
-  annotate_field Types::BaseObject::ID, null: false, definition:
+  annotate_field "Types::BaseObject::ID", null: false, definition:
     def token
       target_data.token
     end
   
-  annotate_field String, null: false, definition:
+  annotate_field "String", null: false, definition:
     def store_name
       target_data.storeName
     end

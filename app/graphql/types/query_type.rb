@@ -10,10 +10,12 @@ module Types
     # Valid root types can be explicitly declared 
     # or we can just lookup the constants in the Types module
     # make target.rb with mapping
-    VALID_ROOT_TYPES = [:Payment, :Merchant]
+    VALID_ROOT_TYPES = [:Merchant, :Payment]
+  
+    # VALID_ROOT_TYPES = [:Payment, :Merchant]
   
     for type in VALID_ROOT_TYPES do
-      targetClass = Module::Target.class_from_sym(type) # obv raise if not valid
+      targetClass = Target.class_from_sym(type) # obv raise if not valid
       targetFields = targetClass.class_variables #symbols :token, :amount
 
       gqlTypeClassName = "#{type.to_s}Type"
@@ -23,7 +25,7 @@ module Types
         implements Types::TargetType
 
         for targetField in targetFields do
-          fieldType = targetClass.class_variable_get(targetField.to_sym).type
+          fieldType = targetClass.class_variable_get(targetField.to_sym).type.constantize #this is now a string
           nullable = targetClass.class_variable_get(targetField.to_sym).null
           field targetField.to_s.tr("@@", "").to_sym, fieldType, null: nullable
         end

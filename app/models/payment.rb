@@ -3,7 +3,7 @@ require 'webmock'
 include WebMock::API
 
 class Payment < TargetBase
-  # associated_target Merchant, :merchant
+  associated_target Merchant, :merchant
 
   def self.target_data_class
     # in real life something more interesting i.e.
@@ -23,12 +23,12 @@ class Payment < TargetBase
   # annotation is going to turn these instance methods into instance variables 
   # which will be objects that we can then in our query type call
   # field.type, field.null? etc. 
-  annotate_field Integer, null: false, definition: 
+  annotate_field "Integer", null: false, definition: 
     def amount
       target_data.amount
     end
   
-  annotate_field Types::BaseObject::ID, null: false, definition: 
+  annotate_field "Types::BaseObject::ID", null: false, definition: 
     def token
       target_data.token
     end
@@ -39,10 +39,10 @@ class Payment < TargetBase
     target_data.merchant_token
   end
 
-  # annotate_field Types::Target::MerchantType, null: false, definition: 
-  #   def merchant
-  #     @merchant ||= Merchant.lookup(merchant_token)
-  #   end
+  annotate_field "Types::MerchantType", null: false, definition: 
+    def merchant
+      @merchant ||= Merchant.lookup(merchant_token)
+    end
 
   ###################
   # Webmock
