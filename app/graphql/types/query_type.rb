@@ -1,4 +1,6 @@
 module Types
+  # extend Target
+
   class QueryType < Types::BaseObject
     # Add root-level fields here.
     # They will be entry points for queries on your schema.
@@ -8,39 +10,33 @@ module Types
     # Valid root types can be explicitly declared 
     # or we can just lookup the constants in the Types module
     # make target.rb with mapping
-    VALID_ROOT_TYPES = [:Payment, :Merchant, :Instrument]
+    VALID_ROOT_TYPES = [:Payment, :Merchant]
   
     for type in VALID_ROOT_TYPES do
-      # use introspection lookup gql type - error if none 
-      # add some safety checks
-      # unless Types.const_defined?(type) raise "Type #{type} is not not a valid entry point into the schema"
-      targetClass = ""
-      targetFields = ""
-      if TargetBase.const_defined?(type)
-        targetClass = TargetBase.const_get(type)
-        targetFields = targetClass.class_variables
+      targetClass = Module::Target.class_from_sym(type) # obv raise if not valid
+      targetFields = targetClass.class_variables #symbols :token, :amount
 
-        gqlTypeName = "Types::Target::#{type.to_s}Type"
-        
-        gqlTypeName = Class.new(Types::BaseObject) do
-          implements Types::TargetType
-          for targetField in targetFields do
-            fieldType = targetClass.class_variable_get(targetField.to_sym).type
-            nullable = targetClass.class_variable_get(targetField.to_sym).null
-            field targetField.to_sym, fieldType, null: nullable
-          end
+      gqlTypeClassName = "#{type.to_s}Type"
+      
+      # replaces merchant_type.rb
+      Types.const_set(gqlTypeClassName, Class.new(Types::BaseObject) do
+        implements Types::TargetType
+
+        for targetField in targetFields do
+          fieldType = targetClass.class_variable_get(targetField.to_sym).type
+          nullable = targetClass.class_variable_get(targetField.to_sym).null
+          field targetField.to_s.tr("@@", "").to_sym, fieldType, null: nullable
         end
+      end)
+      
 
         # we pass in false so that we don't get the instance methods of the super class
         # will probably have to refine this to the ones that are annotated
 
-      end
-
-      # fieldName = /Types::Target::(.*?)Type/.match(type.to_s)[1].downcase
+      # ROOT QUERIES
       fieldName = type.downcase
-      field fieldName, Module.const_get(type), null: false do
-        binding.pry
-        
+      gqlTypeClass = "Types::#{gqlTypeClassName}".constantize
+      field fieldName, gqlTypeClass, null: false do
         argument :id, ID, required: true
       end
     end
@@ -48,7 +44,7 @@ module Types
     # Old code that we metaprogrammed away! 
 
     # field :payment, Types::PaymentType, null: false do
-    #   binding.pry
+
     #   argument :id, ID, required: true
     # end
 

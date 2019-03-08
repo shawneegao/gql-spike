@@ -3,7 +3,7 @@ require 'webmock'
 include WebMock::API
 
 class Payment < TargetBase
-  associated_target Merchant, :merchant
+  # associated_target Merchant, :merchant
 
   def self.target_data_class
     # in real life something more interesting i.e.
@@ -39,10 +39,10 @@ class Payment < TargetBase
     target_data.merchant_token
   end
 
-  annotate_field Merchant, null: false, definition: 
-    def merchant
-      @merchant ||= Merchant.lookup(merchant_token)
-    end
+  # annotate_field Types::Target::MerchantType, null: false, definition: 
+  #   def merchant
+  #     @merchant ||= Merchant.lookup(merchant_token)
+  #   end
 
   ###################
   # Webmock
@@ -61,7 +61,7 @@ class Payment < TargetBase
     )
     .to_return(status: 200, body: [{
       token: '1234',
-      amount: 100,
+      amount: 120,
       merchant_token: 'adfadf'
     }].to_json, headers: {})
   
