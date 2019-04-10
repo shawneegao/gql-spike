@@ -1,61 +1,55 @@
 require 'httparty'
-require 'webmock'
-include WebMock::API
+include TargetWebmocks
 
 class Payment < TargetBase
-  associated_target Merchant, :merchant
-
-  def self.target_data_class
-    # in real life something more interesting i.e.
-    # Squareup::Merchant
-    Hash
+  mattr_accessor :gql_field_annotations do
+    {}
   end
 
-  def self._fetch_target_data(token)
-    raw_data = HTTParty.get(BASE_URL + "/payment/#{token}", format: :json).parsed_response.first
+  stub_target_data(
+    resource: 'payment',
+    id: 1234,
+    response_body: {
+      id: 1234,
+      amount: 100,
+      merchant_id: 4567,
+      card_id: 7890
+    }
+  )
+
+  def self._fetch_target_data(id)
+    # IRL: LedgerClient.get_payment(id)
+
+    raw_data = HTTParty.get(BASE_URL + "/payment/#{id}", format: :json)
+      .parsed_response
     OpenStruct.new(raw_data)
   end
 
-  def self.target_data_class
-    OpenStruct
-  end
-
-  def amount
-    target_data.amount
-  end
-
-  def merchant_token
-    target_data.merchant_token
-  end
-
-  def merchant
-    @merchant ||= Merchant.lookup(merchant_token)
-  end
-
-  ###################
-  # Webmock
-  ###################
-  WebMock.enable!
-  BASE_URL = 'http://api.resources.com'
-
-  # need to figure out how to stub regex
-  stub_request(:get, 'http://api.resources.com/payment/1234')
-    .with(
-      headers: {
-        'Accept' => '*/*',
-        'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
-        'User-Agent' => 'Ruby'
-      }
-    )
-    .to_return(status: 200, body: [{
-      token: '1234',
-      amount: 100,
-      merchant_token: 'adfadf'
-    }].to_json, headers: {})
+  annotate_field "Integer", null: false, definition: 
+    def amount
+      target_data.amount
+    end
   
+  annotate_field "Types::BaseObject::ID", null: false, definition: 
+    def id
+      target_data.id
+    end
 
-  # proto wrappable - do it
-  # we can use Target.type_of(object)
-  # [Example] Target.type_of(user) ==> ::Target::CAPITAL_CUSTOMER
-  # there is also a type is
+  def card_id
+    target_data.card_id
+  end
+  
+  annotate_field "Types::CardType", null: false, definition: 
+    def card
+      @card ||= Card.lookup(card_id)
+    end
+
+  def merchant_id
+    target_data.merchant_id
+  end
+
+  annotate_field "Types::MerchantType", null: false, definition: 
+    def merchant
+      @merchant ||= Merchant.lookup(merchant_id)
+    end
 end

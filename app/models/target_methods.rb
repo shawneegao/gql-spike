@@ -1,55 +1,29 @@
 module TargetMethods
-    attr_reader :token
+    attr_reader :id
 
     def self.included(klass)
       klass.extend(ClassMethods)
     end
 
-    # Target instances are created with a token or underlying data object.
-    #
-    # Target subclasses should feel free to provide helper functions for
-    # instantiation so that callers don't need to know details about the
-    # underlying objects.
-    def initialize(token: nil, target_data: nil, eager_load_data: nil)
-      token = token.to_s
+    # Target instances are created with a id or underlying data object.
+    def initialize(id: nil, target_data: nil, eager_load_data: nil)
+      id = id.to_s
 
-      if token.blank? && target_data.blank?
+      if id.blank? && target_data.blank?
         raise Target::InvalidRequestError,
-          "#{self.class} initializer: Token and target data are both unset"
+          "#{self.class} initializer: id and target data are both unset"
       end
       
       if target_data.present?
         self.target_data = target_data
       else
-        @token = token
+        @id = id
       end
 
       @eager_load_data = eager_load_data
     end
 
-    def reload
-      instance_variables.each do |var|
-        next if var == :@token # do not clear the token variable
-        instance_variable_set(var, nil)
-      end
-
-      reloaded_data = self.class._safe_fetch_target_data(token)
-
-      if reloaded_data.blank?
-        @target_data = nil
-        raise Target::NotFoundError,
-          "Can not find #{self.class} object with token #{token}"
-      end
-
-      self.target_data = reloaded_data
-
-      self
-    end
-
     # Returns the associated target objects for this target.
-    #
-    # @param [Array<String>] filter_types If provided, return just the target
-    #   objects of the given target types. Otherwise, return all target types.
     def associated_targets(filter_types = nil)
       filter_types = Array(filter_types || Target::ALL)
       filter_types &= Current.admin.readable_targets
@@ -61,18 +35,7 @@ module TargetMethods
       targets = association_methods.map do |method_or_method_and_args|
         begin
           Array(send(*method_or_method_and_args))
-        rescue Target::ForbiddenError => error
-          Sq::Common.exception_notifier.notify(
-            "#{self.class.name}#associated_targets: Got forbidden error, skipping",
-            caller: SentryHelper.callstack(15),
-            target: self,
-            association_method: method_or_method_and_args,
-            filter_types: filter_types,
-            reverse_associations: include_available_reverse_associations,
-            message: error.message,
-            level: 'warn',
-          )
-
+        rescue StandardError
           nil
         end
       end.flatten.compact
@@ -92,32 +55,20 @@ module TargetMethods
     end
 
     def ==(other_object)
-      other_object.try(:token) == token && other_object.is_a?(self.class)
+      other_object.try(:id) == id && other_object.is_a?(self.class)
     end
     alias :eql? :==
 
     def hash
-      token.hash
+      id.hash
     end
 
     def <=>(other_object)
-      token <=> other_object.try(:token)
+      id <=> other_object.try(:id)
     end
 
     def target_data
       @target_data ||= reload.target_data
-    end
-
-    def check_permission!(capability)
-      unless check_permission(capability)
-        TargetPermission._handle_forbidden_error(Target.type_of(self), capability, target_scopes)
-      end
-
-      true
-    end
-
-    def check_permission(capability)
-      !access_type(capability).blocked?
     end
 
     # Returns a TargetAccessType constant
@@ -144,9 +95,7 @@ module TargetMethods
 
     def target_data=(input_target_data)
       @target_data = input_target_data
-      @token = _token
-      # check_permission!(TargetCapability::READ)
-      # EventstreamHelper.log_target_load(self)
+      @id = id
     end
 
     def _association_method_for_type(type)
@@ -173,8 +122,8 @@ module TargetMethods
       @target_data.present?
     end
 
-    def valid_token?
-      self.class.valid_token?(token)
+    def valid_id?
+      self.class.valid_id?(id)
     end
 
     def valid_target_data_class?
@@ -207,25 +156,6 @@ module TargetMethods
             'Targets must not specify both associated_targets and `has_no_associated_targets`'
         end
         @_registered_associations[target_type] = association_method
-      end
-
-      def has_no_associated_targets
-        if @_registered_associations.present?
-          raise Target::TargetError,
-            'Targets must not specify both associated_targets and `has_no_associated_targets`'
-        end
-        @_registered_associations = { none: true }
-      end
-
-      def polymorphic_association(method_name, types: Target::ALL)
-        @_registered_associations ||= {}
-        if @_registered_associations[:none]
-          raise Target::TargetError,
-            'Targets must not specify both associated_targets and `has_no_associated_targets`'
-        end
-        types.each do |target_type|
-          @_registered_associations[target_type] = [method_name, target_type]
-        end
       end
     end
   end

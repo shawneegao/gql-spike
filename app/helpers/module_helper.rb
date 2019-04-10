@@ -18,8 +18,6 @@ module ModuleHelper
 
         constant_values
       end
-
-      const_set(:ALL, all_values.freeze)
     end
 
     # This hearty dose of metaprogramming might be overkill,

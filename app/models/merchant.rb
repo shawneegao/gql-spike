@@ -1,44 +1,32 @@
-# frozen_string_literal: true
-# fyi target_data is in target_methods
 require 'httparty'
-require 'webmock'
-include WebMock::API
+include TargetWebmocks
 
 class Merchant < TargetBase
-  def self._fetch_target_data(token)
-    raw_data = HTTParty.get(BASE_URL + "/merchant/#{token}", format: :json).parsed_response.first
+  mattr_accessor :gql_field_annotations do
+    {}
+  end
+  
+  stub_target_data(
+    resource: 'merchant',
+    id: 4567,
+    response_body: {
+      id: 4567,
+      store_name: 'Grillz by Nelly'
+    }
+  )
+
+  def self._fetch_target_data(id)
+    raw_data = HTTParty.get(BASE_URL + "/merchant/#{id}", format: :json).parsed_response
     OpenStruct.new(raw_data)
   end
 
-  def self.target_data_class
-    OpenStruct
-  end
-
-  def token
-    target_data.token
-  end
-
-  def store_name
-    target_data.storeName
-  end
-
-  ###################
-  # Webmock
-  ###################
-  WebMock.enable!
-  BASE_URL = 'http://api.resources.com'
-
-  # need to figure out how to stub regex
-  stub_request(:get, 'http://api.resources.com/merchant/adfadf')
-    .with(
-      headers: {
-        'Accept' => '*/*',
-        'Accept-Encoding' => 'gzip;q=1.0,deflate;q=0.6,identity;q=0.3',
-        'User-Agent' => 'Ruby'
-      }
-    )
-    .to_return(status: 200, body: [{
-      token: 'adfadf',
-      storeName: 'Sobey'
-    }].to_json, headers: {})
+  annotate_field "Types::BaseObject::ID", null: false, definition: 
+    def id
+      target_data.id
+    end
+    
+  annotate_field "String", null: false, definition: 
+    def store_name
+      target_data.store_name
+    end
 end
